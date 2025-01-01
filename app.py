@@ -9,14 +9,14 @@ GROQ_API_KEY = "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"
 
 # Available models for selection
 MODEL_OPTIONS = [
-    "distil-whisper-large-v3-en",
+    "mixtral-8x7b-32768",
     "gemma2-9b-it",
     "llama-3.3-70b-versatile",
     "llama-3.1-8b-instant",
     "llama-guard-3-8b",
     "llama3-70b-8192",
     "llama3-8b-8192",
-    "mixtral-8x7b-32768",
+    "distil-whisper-large-v3-en",
     "whisper-large-v3",
     "whisper-large-v3-turbo"
 ]
@@ -26,6 +26,10 @@ if "extracted_code" not in st.session_state:
     st.session_state.extracted_code = ""
 if "api_error" not in st.session_state:
     st.session_state.api_error = ""
+if "retry_count" not in st.session_state:
+    st.session_state.retry_count = 0
+
+RETRY_LIMIT = 3
 
 def main():
     st.title("Welcome to Vijay's GenAI App")
@@ -50,6 +54,7 @@ def main():
     # Button to trigger Mermaid code generation
     if st.button("Generate Mermaid Diagram"):
         if user_prompt:
+            st.session_state.retry_count = 0
             process_with_groq_api(user_prompt, selected_model, temperature, top_p)
         else:
             st.warning("Please enter a prompt.")
@@ -59,26 +64,7 @@ def main():
         st.write("### Extracted Mermaid Code")
         st.code(st.session_state.extracted_code, language="mermaid")
 
-        try:
-            # Custom styling to render the Mermaid diagram in a larger view
-            st.markdown(
-                """
-                <style>
-                    .mermaid {
-                        width: 100%;
-                        height: 80vh;
-                        margin: 0 auto;
-                    }
-                </style>
-                """,
-                unsafe_allow_html=True,
-            )
-
-            # Directly render the Mermaid diagram on the Streamlit page in a larger view
-            st_mermaid(st.session_state.extracted_code)
-            st.info("To save the diagram, you can also download it below.")
-        except Exception as e:
-            st.error(f"Error rendering Mermaid diagram: {e}")
+        render_mermaid_diagram(st.session_state.extracted_code)
 
         # Generate downloadable HTML with SVG button
         html_content_with_download = generate_mermaid_html_with_download(st.session_state.extracted_code)
@@ -126,6 +112,24 @@ def extract_code_from_response(response):
     """Extract the first block of code wrapped in triple backticks."""
     match = re.search(r"```(?:[a-zA-Z]*)?\n(.*?)```", response, re.DOTALL)
     return match.group(1).strip() if match else response.strip()
+
+def render_mermaid_diagram(mermaid_code):
+    """Render Mermaid diagram and retry if syntax error detected."""
+    try:
+        st_mermaid(mermaid_code)
+        st.session_state.retry_count = 0  # Reset retry count on successful render
+    except Exception as e:
+        if "Syntax error in text" in str(e) and st.session_state.retry_count < RETRY_LIMIT:
+            st.session_state.retry_count += 1
+            st.warning(f"Syntax error detected. Retrying... ({st.session_state.retry_count}/{RETRY_LIMIT})")
+            process_with_groq_api(
+                user_prompt=st.session_state.extracted_code,
+                selected_model=st.session_state.selected_model,
+                temperature=1.0,
+                top_p=1.0
+            )
+        else:
+            st.error(f"Error rendering Mermaid diagram: {e}")
 
 def generate_mermaid_html_with_download(mermaid_code):
     """Generate an HTML file with embedded Mermaid diagram and a button to download it as SVG."""
