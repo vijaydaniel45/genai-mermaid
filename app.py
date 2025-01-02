@@ -9,16 +9,11 @@ GROQ_API_KEY = "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"
 
 # Available models for selection
 MODEL_OPTIONS = [
-    "mixtral-8x7b-32768",
     "gemma2-9b-it",
-    "llama-3.3-70b-versatile",
+    "mixtral-8x7b-32768",
     "llama-3.1-8b-instant",
-    "llama-guard-3-8b",
     "llama3-70b-8192",
-    "llama3-8b-8192",
-    "distil-whisper-large-v3-en",
-    "whisper-large-v3",
-    "whisper-large-v3-turbo"
+    "llama3-8b-8192"
 ]
 
 # Initialize session state
@@ -28,11 +23,13 @@ if "api_error" not in st.session_state:
     st.session_state.api_error = ""
 if "retry_count" not in st.session_state:
     st.session_state.retry_count = 0
+if "selected_model" not in st.session_state:
+    st.session_state.selected_model = MODEL_OPTIONS[0]
 
 RETRY_LIMIT = 3
 
 def main():
-    st.title("Welcome to Vijay's GenAI App")
+    st.title("Mermaid Diagram Generator")
     st.markdown(
         """
         ### Generate Mermaid Diagrams
@@ -41,21 +38,54 @@ def main():
         """
     )
 
+    # Sidebar for examples
+    with st.sidebar:
+        st.header("Examples")
+        st.markdown("**Example 1:**")
+        st.text(
+            """Generate mermaid code for the following:
+1. User logs in
+2. User checks logs
+3. If logs > 3GB, clear them
+4. Else, allocate space
+5. Notify OC team
+6. End flow"""
+        )
+        st.markdown("**Example 2:**")
+        st.text(
+            """Generate mermaid code to create a sequence diagram:
+- User logs into the system
+- Reviews dumped logs
+- Deletes logs if size > 3GB
+- Expands space otherwise
+- Sends completion email to OC
+- Ends process"""
+        )
+        st.markdown("**Example 3:**")
+        st.text(
+            """Generate mermaid code to crate a flowchart:
+- Login -> Check logs -> Size check
+- If > 3GB: Clear logs
+- Else: Allocate space
+- Notify OC team -> End"""
+        )
+        st.markdown("Feel free to modify these examples or create your own and make sure you starts with **Generate mermaid code**!")
+
     # Model selection dropdown
-    selected_model = st.selectbox("Select Model", MODEL_OPTIONS)
+    st.session_state.selected_model = st.selectbox("Select Model", MODEL_OPTIONS)
 
     # Sampling options
     temperature = st.slider("Temperature", min_value=0.0, max_value=2.0, value=1.0, step=0.1)
     top_p = st.slider("Top P", min_value=0.0, max_value=1.0, value=1.0, step=0.05)
 
     # User input for the prompt
-    user_prompt = st.text_area("Enter your prompt (e.g., Generate a Data Flow Diagram):")
+    user_prompt = st.text_area("Enter your prompt:", "Generate mermaid code for ...")
 
     # Button to trigger Mermaid code generation
     if st.button("Generate Mermaid Diagram"):
         if user_prompt:
             st.session_state.retry_count = 0
-            process_with_groq_api(user_prompt, selected_model, temperature, top_p)
+            process_with_groq_api(user_prompt, temperature, top_p)
         else:
             st.warning("Please enter a prompt.")
 
@@ -79,7 +109,7 @@ def main():
     if st.session_state.api_error:
         st.error(f"API Error: {st.session_state.api_error}")
 
-def process_with_groq_api(user_prompt, selected_model, temperature, top_p):
+def process_with_groq_api(user_prompt, temperature, top_p):
     """Send user prompt to Groq API and extract Mermaid code."""
     try:
         headers = {
@@ -87,7 +117,7 @@ def process_with_groq_api(user_prompt, selected_model, temperature, top_p):
             "Content-Type": "application/json",
         }
         payload = {
-            "model": selected_model,
+            "model": st.session_state.selected_model,
             "messages": [{"role": "user", "content": user_prompt}],
             "temperature": temperature,
             "top_p": top_p,
@@ -122,12 +152,7 @@ def render_mermaid_diagram(mermaid_code):
         if "Syntax error in text" in str(e) and st.session_state.retry_count < RETRY_LIMIT:
             st.session_state.retry_count += 1
             st.warning(f"Syntax error detected. Retrying... ({st.session_state.retry_count}/{RETRY_LIMIT})")
-            process_with_groq_api(
-                user_prompt=st.session_state.extracted_code,
-                selected_model=st.session_state.selected_model,
-                temperature=1.0,
-                top_p=1.0
-            )
+            render_mermaid_diagram(mermaid_code)  # Retry rendering
         else:
             st.error(f"Error rendering Mermaid diagram: {e}")
 
@@ -137,16 +162,6 @@ def generate_mermaid_html_with_download(mermaid_code):
     <!DOCTYPE html>
     <html>
     <head>
-        <style>
-            body {{
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                height: 100vh;
-                margin: 0;
-                background-color: #f9f9f9;
-            }}
-        </style>
         <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
         <script>
         mermaid.initialize({{ startOnLoad: true }});
@@ -163,13 +178,10 @@ def generate_mermaid_html_with_download(mermaid_code):
         </script>
     </head>
     <body>
-        <div>
-            <div class="mermaid">
-                {mermaid_code}
-            </div>
-            <br>
-            <button onclick="downloadSVG()">Download as SVG</button>
+        <div class="mermaid">
+            {mermaid_code}
         </div>
+        <button onclick="downloadSVG()">Download as SVG</button>
     </body>
     </html>
     """
