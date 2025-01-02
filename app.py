@@ -4,8 +4,8 @@ import streamlit as st
 from streamlit_mermaid import st_mermaid  # Mermaid rendering component
 
 # Groq API settings
-GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
-GROQ_API_KEY = "your groq api key" # create your api key from api.groq.com
+GROQ_API_URL = st.secrets["GROQ_API"]["GROQ_API_URL"]
+GROQ_API_KEY = st.secrets["GROQ_API"]["GROQ_API_KEY"]
 
 # Available models for selection
 MODEL_OPTIONS = [
