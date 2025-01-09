@@ -2,6 +2,7 @@ import re
 import requests
 import streamlit as st
 from streamlit_mermaid import st_mermaid  # Mermaid rendering component
+from transformers import pipeline  # For sentiment analysis
 
 # Groq API settings
 GROQ_API_URL = st.secrets["GROQ_API"]["GROQ_API_URL"]
@@ -29,6 +30,9 @@ if "temperature" not in st.session_state:
     st.session_state.temperature = 1.0  # default temperature
 
 RETRY_LIMIT = 3
+
+# Initialize sentiment analysis model
+sentiment_analyzer = pipeline("sentiment-analysis")
 
 # Feedback file path
 FEEDBACK_FILE_PATH = "feedback.txt"
@@ -214,9 +218,8 @@ def save_feedback(feedback):
 def analyze_feedback(feedback):
     """Analyze feedback using sentiment analysis and adjust generation parameters."""
     try:
-        # Perform sentiment analysis (You can replace with a proper sentiment analyzer)
-        sentiment = {"label": "NEUTRAL"}  # Example: replace with actual sentiment analyzer results
-        
+        # Perform sentiment analysis using Hugging Face's sentiment-analysis pipeline
+        sentiment = sentiment_analyzer(feedback)[0]  # Get the first result from the response
         label = sentiment["label"]
 
         # Adjust parameters based on sentiment

@@ -3,3 +3,5 @@ Feedback: can you provide from left to right though diagram looks good
 Feedback: still i am not able to see diagram from left to right position and generate me new diagram from left to right.
 Feedback: i am getting syntax error in text.  Regenerate
 Feedback: i am getting syntax error not seeing diagram generated
+Feedback: can you generate from left to right?
+Feedback: i am getting syntax error. you should regenerate
