@@ -25,8 +25,13 @@ if "retry_count" not in st.session_state:
     st.session_state.retry_count = 0
 if "selected_model" not in st.session_state:
     st.session_state.selected_model = MODEL_OPTIONS[0]
+if "temperature" not in st.session_state:
+    st.session_state.temperature = 1.0  # default temperature
 
 RETRY_LIMIT = 3
+
+# Feedback file path
+FEEDBACK_FILE_PATH = "feedback.txt"
 
 def main():
     st.title("Mermaid Diagram Generator")
@@ -75,7 +80,7 @@ def main():
     st.session_state.selected_model = st.selectbox("Select Model", MODEL_OPTIONS)
 
     # Sampling options
-    temperature = st.slider("Temperature", min_value=0.0, max_value=2.0, value=1.0, step=0.1)
+    temperature = st.slider("Temperature", min_value=0.0, max_value=2.0, value=st.session_state.temperature, step=0.1)
     top_p = st.slider("Top P", min_value=0.0, max_value=1.0, value=1.0, step=0.05)
 
     # User input for the prompt
@@ -108,6 +113,16 @@ def main():
     # Display any API error messages
     if st.session_state.api_error:
         st.error(f"API Error: {st.session_state.api_error}")
+
+    # Feedback Section
+    feedback = st.text_area("Provide feedback on the generated code:")
+    if st.button("Submit Feedback"):
+        if feedback:
+            save_feedback(feedback)
+            analyze_feedback(feedback)  # Automatically analyze and adjust based on feedback
+            st.info("Feedback submitted and used for learning!")
+        else:
+            st.warning("Please provide feedback before submitting.")
 
 def process_with_groq_api(user_prompt, temperature, top_p):
     """Send user prompt to Groq API and extract Mermaid code."""
@@ -187,5 +202,36 @@ def generate_mermaid_html_with_download(mermaid_code):
     """
     return html_template
 
+def save_feedback(feedback):
+    """Save feedback to the feedback file."""
+    try:
+        with open(FEEDBACK_FILE_PATH, "a") as f:
+            f.write(f"Feedback: {feedback}\n")
+        st.success("Feedback saved!")
+    except Exception as e:
+        st.error(f"Error saving feedback: {e}")
+
+def analyze_feedback(feedback):
+    """Analyze feedback using sentiment analysis and adjust generation parameters."""
+    try:
+        # Perform sentiment analysis (You can replace with a proper sentiment analyzer)
+        sentiment = {"label": "NEUTRAL"}  # Example: replace with actual sentiment analyzer results
+        
+        label = sentiment["label"]
+
+        # Adjust parameters based on sentiment
+        if label == "POSITIVE":
+            st.session_state.temperature = 1.5  # Increase temperature for more creative responses
+        elif label == "NEGATIVE":
+            st.session_state.temperature = 0.5  # Decrease temperature for more structured responses
+        else:
+            st.session_state.temperature = 1.0  # Keep neutral for balanced responses
+
+        st.session_state.feedback_sentiment = label
+        st.info(f"Feedback sentiment: {label}. Adjusting response generation parameters.")
+    except Exception as e:
+        st.error(f"Error analyzing feedback: {e}")
+
 if __name__ == "__main__":
     main()
+
