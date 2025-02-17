@@ -37,6 +37,15 @@ sentiment_analyzer = pipeline("sentiment-analysis")
 # Feedback file path
 FEEDBACK_FILE_PATH = "feedback.txt"
 
+def validate_mermaid_syntax(mermaid_code):
+    """Simple validation to check if the Mermaid code is syntactically correct."""
+    # Basic checks for common Mermaid syntax elements
+    if not mermaid_code.strip():
+        return False
+    if "graph" not in mermaid_code.lower() and "sequenceDiagram" not in mermaid_code.lower():
+        return False
+    return True
+
 def main():
     st.title("Mermaid Diagram Generator")
     st.markdown(
@@ -103,7 +112,10 @@ def main():
         st.write("### Extracted Mermaid Code")
         st.code(st.session_state.extracted_code, language="mermaid")
 
-        render_mermaid_diagram(st.session_state.extracted_code)
+        if validate_mermaid_syntax(st.session_state.extracted_code):
+            render_mermaid_diagram(st.session_state.extracted_code)
+        else:
+            st.error("Invalid Mermaid syntax. Please check the generated code.")
 
         # Generate downloadable HTML with SVG button
         html_content_with_download = generate_mermaid_html_with_download(st.session_state.extracted_code)
@@ -237,4 +249,3 @@ def analyze_feedback(feedback):
 
 if __name__ == "__main__":
     main()
-
